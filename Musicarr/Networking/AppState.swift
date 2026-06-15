@@ -22,8 +22,8 @@ final class AppState: ObservableObject {
         api = APIClient(baseURL: url)
 
         NotificationCenter.default.addObserver(
-            forName: .musicarrUnauthorized, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.me = nil }
+            forName: .musicarrUnauthorized, object: nil, queue: .main) { _ in
+            Task { @MainActor [weak self] in self?.me = nil }
         }
     }
 

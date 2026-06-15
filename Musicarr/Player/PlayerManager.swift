@@ -39,12 +39,12 @@ final class PlayerManager: ObservableObject {
         configureAudioSession()
         player.volume = volume
         let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
-        timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] t in
-            Task { @MainActor in self?.onTick(t) }
+        timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { t in
+            Task { @MainActor [weak self] in self?.onTick(t) }
         }
         itemEndObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.trackEnded() }
+            forName: .AVPlayerItemDidPlayToEndTime, object: nil, queue: .main) { _ in
+            Task { @MainActor [weak self] in self?.trackEnded() }
         }
         setupRemoteCommands()
     }
@@ -143,12 +143,13 @@ final class PlayerManager: ObservableObject {
             asset = AVURLAsset(url: app.streamURL(track.id), options: options)
         }
         let item = AVPlayerItem(asset: asset)
-        statusObservation = item.observe(\.status, options: [.new]) { [weak self] it, _ in
-            Task { @MainActor in
-                if it.status == .readyToPlay {
-                    self?.duration = it.duration.seconds.isFinite ? it.duration.seconds : Double(track.duration ?? 0)
-                    self?.updateNowPlaying()
-                }
+        statusObservation = item.observe(\.status, options: [.new]) { it, _ in
+            let ready = it.status == .readyToPlay
+            let seconds = it.duration.seconds
+            Task { @MainActor [weak self] in
+                guard ready, let self else { return }
+                self.duration = seconds.isFinite ? seconds : Double(track.duration ?? 0)
+                self.updateNowPlaying()
             }
         }
         player.replaceCurrentItem(with: item)
@@ -200,14 +201,15 @@ final class PlayerManager: ObservableObject {
 
     private func setupRemoteCommands() {
         let c = MPRemoteCommandCenter.shared()
-        c.playCommand.addTarget { [weak self] _ in Task { @MainActor in self?.toggle() }; return .success }
-        c.pauseCommand.addTarget { [weak self] _ in Task { @MainActor in self?.toggle() }; return .success }
-        c.togglePlayPauseCommand.addTarget { [weak self] _ in Task { @MainActor in self?.toggle() }; return .success }
-        c.nextTrackCommand.addTarget { [weak self] _ in Task { @MainActor in self?.next() }; return .success }
-        c.previousTrackCommand.addTarget { [weak self] _ in Task { @MainActor in self?.prev() }; return .success }
-        c.changePlaybackPositionCommand.addTarget { [weak self] event in
+        c.playCommand.addTarget { _ in Task { @MainActor [weak self] in self?.toggle() }; return .success }
+        c.pauseCommand.addTarget { _ in Task { @MainActor [weak self] in self?.toggle() }; return .success }
+        c.togglePlayPauseCommand.addTarget { _ in Task { @MainActor [weak self] in self?.toggle() }; return .success }
+        c.nextTrackCommand.addTarget { _ in Task { @MainActor [weak self] in self?.next() }; return .success }
+        c.previousTrackCommand.addTarget { _ in Task { @MainActor [weak self] in self?.prev() }; return .success }
+        c.changePlaybackPositionCommand.addTarget { event in
             guard let e = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
-            Task { @MainActor in self?.seek(e.positionTime) }
+            let position = e.positionTime
+            Task { @MainActor [weak self] in self?.seek(position) }
             return .success
         }
     }
