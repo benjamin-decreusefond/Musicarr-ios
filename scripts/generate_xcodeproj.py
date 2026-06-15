@@ -282,7 +282,7 @@ def target_settings(platform, bundle_id, plist, family, appicon):
         s["INFOPLIST_KEY_UIApplicationSceneManifest_Generation"] = "YES"
     else:
         s["SDKROOT"] = "appletvos"
-        s["TVOS_DEPLOYMENT_TARGET"] = "16.0"
+        s["TVOS_DEPLOYMENT_TARGET"] = "17.0"
         s["SUPPORTED_PLATFORMS"] = '"appletvos appletvsimulator"'
     return s
 

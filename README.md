@@ -2,7 +2,7 @@
 
 A native **SwiftUI** client for a [Musicarr](https://github.com/benjamin-decreusefond/musicarr)
 server, built to mirror the Musicarr web interface. It runs on **iPhone/iPad
-(iOS 16+)** and **Apple TV (tvOS 16+)** from a single shared codebase.
+(iOS 16+)** and **Apple TV (tvOS 17+)** from a single shared codebase.
 
 The app is **purely a client** of your Musicarr server:
 
@@ -80,5 +80,5 @@ xcodegen generate                         # uses project.yml
 ## Requirements
 
 - Xcode 15+
-- iOS 16+ / tvOS 16+
+- iOS 16+ / tvOS 17+
 - A reachable Musicarr server (e.g. `https://musicarr.example.com`)

@@ -7,7 +7,7 @@ options:
   bundleIdPrefix: ovh.bigbossben.musicarr
   deploymentTarget:
     iOS: "16.0"
-    tvOS: "16.0"
+    tvOS: "17.0"
   createIntermediateGroups: true
 
 settings:
