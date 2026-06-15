@@ -57,6 +57,13 @@ struct NowPlayingView: View {
 
     private var scrubber: some View {
         VStack(spacing: 4) {
+            #if os(tvOS)
+            // tvOS has no Slider; show a progress bar (transport is driven from
+            // the Siri Remote and the on-screen prev/next controls).
+            ProgressView(value: min(player.time, max(player.duration, 0.0001)),
+                         total: max(player.duration, 0.0001))
+                .tint(Theme.accent)
+            #else
             Slider(value: Binding(
                 get: { scrubbing ? scrubValue : player.time },
                 set: { scrubValue = $0 }
@@ -65,6 +72,7 @@ struct NowPlayingView: View {
                 if !editing { player.seek(scrubValue) }
             })
             .tint(Theme.accent)
+            #endif
             HStack {
                 Text(formatTime(scrubbing ? scrubValue : player.time))
                 Spacer()

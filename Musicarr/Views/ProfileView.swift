@@ -46,7 +46,7 @@ struct ProfileView: View {
                         Button("Remove all offline downloads", role: .destructive) { downloads.removeAll() }
                     }.listRowBackground(Theme.bgElev)
                 }
-                .scrollContentBackground(.hidden)
+                .hideScrollBackground()
             }
             .navigationTitle("Profile")
             .toolbar {

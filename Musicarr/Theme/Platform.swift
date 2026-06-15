@@ -14,6 +14,16 @@ extension View {
         #endif
     }
 
+    /// Hide the default list/scroll background on iOS (the modifier is
+    /// unavailable on tvOS, where lists are already transparent over our bg).
+    @ViewBuilder func hideScrollBackground() -> some View {
+        #if os(iOS)
+        self.scrollContentBackground(.hidden)
+        #else
+        self
+        #endif
+    }
+
     /// Pull-to-refresh on iOS only (unsupported on tvOS).
     @ViewBuilder func musicarrRefreshable(_ action: @escaping () async -> Void) -> some View {
         #if os(iOS)

@@ -89,7 +89,7 @@ struct QueueView: View {
                 }
                 .onDelete { idx in idx.forEach { player.removeFromQueue($0) } }
             }
-            .scrollContentBackground(.hidden)
+            .hideScrollBackground()
             .background(PageBackground())
             .navigationTitle("Queue")
             #if os(iOS)
