@@ -6,6 +6,7 @@ struct MusicarrApp: App {
     @StateObject private var player = PlayerManager()
     @StateObject private var downloads: DownloadManager
     @StateObject private var library: LibraryStore
+    @StateObject private var listen = ListenTogetherManager()
 
     init() {
         let appState = AppState()
@@ -21,8 +22,10 @@ struct MusicarrApp: App {
                 .environmentObject(player)
                 .environmentObject(downloads)
                 .environmentObject(library)
+                .environmentObject(listen)
                 .task {
                     player.attach(app: app, downloads: downloads)
+                    listen.attach(app: app, player: player)
                     await app.bootstrap()
                     if app.me != nil { await library.refresh() }
                 }

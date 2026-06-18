@@ -135,8 +135,23 @@ struct PlaylistLite: Codable, Identifiable, Equatable, Hashable {
     var count: Int?
     var nb_tracks: Int?
     var by: String?
+    // Sharing metadata (present for /api/playlists items the user can access).
+    private var isOwnerRaw: FlexibleBool?
+    private var canEditRaw: FlexibleBool?
+    private var sharedRaw: FlexibleBool?
+    var owner_name: String?
+    var is_owner: Bool? { isOwnerRaw?.value }
+    var can_edit: Bool? { canEditRaw?.value }
+    var shared: Bool? { sharedRaw?.value }
     var displayName: String { name ?? title ?? "Playlist" }
     var trackCount: Int { count ?? nb_tracks ?? 0 }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, title, cover, count, nb_tracks, by, owner_name
+        case isOwnerRaw = "is_owner"
+        case canEditRaw = "can_edit"
+        case sharedRaw = "shared"
+    }
 }
 
 // MARK: - Composite responses
@@ -159,6 +174,14 @@ struct ArtistResponse: Codable {
     var top: [Track] = []
     var albums: [AlbumLite] = []
     var related: [ArtistLite] = []
+    /// Present when the server includes the signed-in user's follow state.
+    private let followingRaw: FlexibleBool?
+    var following: Bool? { followingRaw?.value }
+
+    enum CodingKeys: String, CodingKey {
+        case artist, top, albums, related
+        case followingRaw = "following"
+    }
 }
 
 struct AlbumResponse: Codable {
@@ -223,9 +246,22 @@ struct PlaylistDetail: Codable {
     let id: Int
     var name: String?
     var title: String?
-    let is_owner: Bool?
+    private let isOwnerRaw: FlexibleBool?
+    private let canEditRaw: FlexibleBool?
+    private let sharedRaw: FlexibleBool?
+    var owner_name: String?
     var tracks: [Track] = []
+    var is_owner: Bool? { isOwnerRaw?.value }
+    var can_edit: Bool? { canEditRaw?.value }
+    var shared: Bool? { sharedRaw?.value }
     var displayName: String { name ?? title ?? "Playlist" }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, title, owner_name, tracks
+        case isOwnerRaw = "is_owner"
+        case canEditRaw = "can_edit"
+        case sharedRaw = "shared"
+    }
 }
 
 struct Recommendations: Codable {

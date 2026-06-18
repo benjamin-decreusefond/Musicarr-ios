@@ -11,6 +11,9 @@ final class DownloadManager: ObservableObject {
     @Published private(set) var items: [OfflineItem] = []
     /// Track id -> 0...1 progress while a download is in flight.
     @Published private(set) var inFlight: [Int: Double] = [:]
+    /// Track ids whose most recent offline download attempt failed, so the UI can
+    /// surface the failure instead of silently swallowing it.
+    @Published private(set) var failed: Set<Int> = []
 
     private let app: AppState
     private let fm = FileManager.default
@@ -52,6 +55,7 @@ final class DownloadManager: ObservableObject {
     func download(_ track: Track) {
         guard !isDownloaded(track.id), tasks[track.id] == nil else { return }
         inFlight[track.id] = 0
+        failed.remove(track.id)
         let id = track.id
         let url = app.streamURL(id)
         let task = Task { [weak self] in
@@ -60,16 +64,18 @@ final class DownloadManager: ObservableObject {
                 let (tempURL, bytes) = try await self.engine.download(url: url) { progress in
                     Task { @MainActor [weak self] in self?.inFlight[id] = progress }
                 }
-                if Task.isCancelled { try? self.fm.removeItem(at: tempURL); return }
+                if Task.isCancelled { try? self.fm.removeItem(at: tempURL); self.inFlight[id] = nil; self.tasks[id] = nil; return }
                 let dest = self.audioURL(id)
                 try? self.fm.removeItem(at: dest)
                 try self.fm.moveItem(at: tempURL, to: dest)
                 var saved = track
                 saved.available = true
                 self.items.append(OfflineItem(track: saved, bytes: bytes, savedAt: Date()))
+                self.failed.remove(id)
                 self.persist()
             } catch {
                 try? self.fm.removeItem(at: self.audioURL(id))   // no partial file
+                if !Task.isCancelled { self.failed.insert(id) }  // surface the failure
             }
             self.inFlight[id] = nil
             self.tasks[id] = nil
@@ -77,10 +83,16 @@ final class DownloadManager: ObservableObject {
         tasks[id] = task
     }
 
+    /// Whether the last offline-download attempt for this track failed.
+    func didFail(_ id: Int) -> Bool { failed.contains(id) }
+    /// Clear a recorded failure (e.g. before a retry or when dismissed).
+    func clearFailure(_ id: Int) { failed.remove(id) }
+
     func cancel(_ id: Int) {
         tasks[id]?.cancel()
         tasks[id] = nil
         inFlight[id] = nil
+        failed.remove(id)
         try? fm.removeItem(at: audioURL(id))
     }
 

@@ -5,6 +5,9 @@ struct ArtistView: View {
     @EnvironmentObject private var app: AppState
     @EnvironmentObject private var player: PlayerManager
 
+    @State private var following: Bool? = nil   // nil until resolved
+    @State private var followBusy = false
+
     var body: some View {
         ScrollView {
             AsyncContent(load: { try await app.artist(id) }) { data in
@@ -12,6 +15,8 @@ struct ArtistView: View {
                     DetailHero(cover: data.artist.picture, kind: "Artist",
                                title: data.artist.name,
                                subtitle: fanCount(data.artist.nb_fan), circle: true)
+
+                    followButton(data)
 
                     if !data.top.isEmpty {
                         PrimaryButton(title: "Play", systemImage: "play.fill") {
@@ -42,6 +47,40 @@ struct ArtistView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+
+    @ViewBuilder private func followButton(_ data: ArtistResponse) -> some View {
+        let isFollowing = following ?? data.following ?? false
+        Button {
+            guard !followBusy else { return }
+            followBusy = true
+            let next = !isFollowing
+            following = next
+            Task {
+                do {
+                    if next { try await app.follow(artistId: id) }
+                    else { try await app.unfollow(artistId: id) }
+                } catch { following = isFollowing }   // revert on failure
+                followBusy = false
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: isFollowing ? "checkmark" : "plus")
+                Text(isFollowing ? "Following" : "Follow").font(Theme.body(14, weight: .semibold))
+            }
+            .padding(.horizontal, 18).padding(.vertical, 10)
+            .overlay(Capsule().stroke(isFollowing ? Theme.accent : Theme.line, lineWidth: 1))
+            .foregroundStyle(isFollowing ? Theme.accent : Theme.text)
+        }
+        .buttonStyle(.plain)
+        .task {
+            // Resolve follow state from /api/following when the response omitted it.
+            if following == nil && data.following == nil {
+                if let list = try? await app.following() {
+                    following = list.contains { $0.id == id }
+                }
+            }
+        }
     }
 
     private func fanCount(_ n: Int?) -> String? {

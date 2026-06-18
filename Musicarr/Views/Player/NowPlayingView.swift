@@ -10,6 +10,7 @@ struct NowPlayingView: View {
     @State private var scrubValue = 0.0
     @State private var showLyrics = false
     @State private var showQueue = false
+    @State private var showListen = false
 
     var body: some View {
         ZStack {
@@ -41,6 +42,7 @@ struct NowPlayingView: View {
         }
         .sheet(isPresented: $showLyrics) { LyricsView().musicarrScreen() }
         .sheet(isPresented: $showQueue) { QueueView().musicarrScreen() }
+        .sheet(isPresented: $showListen) { ListenTogetherView() }
     }
 
     private var artSize: CGFloat {
@@ -121,6 +123,10 @@ struct NowPlayingView: View {
 
             Button { showQueue = true } label: {
                 Image(systemName: "list.bullet").foregroundStyle(Theme.textDim)
+            }.buttonStyle(.plain)
+
+            Button { showListen = true } label: {
+                Image(systemName: "person.2.wave.2").foregroundStyle(Theme.textDim)
             }.buttonStyle(.plain)
         }
         .font(.system(size: 20))
