@@ -35,7 +35,7 @@ struct MadeForYouView: View {
         VStack(alignment: .leading, spacing: 12) {
             RowTitle(text: title)
             let cols = [GridItem(.adaptive(minimum: 150), spacing: 16)]
-            LazyVGrid(columns: cols, spacing: 18, alignment: .leading) {
+            LazyVGrid(columns: cols, alignment: .leading, spacing: 18) {
                 ForEach(mixes) { mix in
                     NavigationLink(value: mix) {
                         ArtTile(cover: mix.cover ?? mix.tracks.first?.cover,
