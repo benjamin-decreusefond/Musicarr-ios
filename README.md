@@ -27,7 +27,16 @@ The app is **purely a client** of your Musicarr server:
 | **Playlists** | Create, view, add/remove tracks, delete; import Deezer playlists (server-side). |
 | **Downloads** | Two tabs — *On this device* (offline files) and *Server queue* (live Soulseek fetch progress). |
 | **Player** | AVPlayer streaming, queue with reorder, repeat modes, lock-screen / Siri Remote controls (`MPNowPlayingInfoCenter`), time-synced **lyrics**. |
-| **Offline** | "Download for offline" on any playable track; offline-only mode when the server can't be reached. |
+| **Offline** | "Download for offline" on any playable track; offline-only mode when the server can't be reached; surfaced download-failure state. |
+| **Your stats** | Listening totals, top artists/tracks/albums and a 14-day bar chart, by week/month/year/all-time (`/api/stats`). |
+| **Made for you** | Smart and daily mixes as playable cards (`/api/mixes`), plus recommendations/radio seeds. |
+| **Listen Together** | Polling-based synced playback: start/join by code, see members, host broadcasts state, guests follow play/pause and seek on drift (`/api/listen/*`). |
+| **Following** | Follow/unfollow artists for auto-download of new releases; a Following list (`/api/following`). |
+| **Social** | Search users, follow/unfollow, see who you follow + their now-playing, and user profiles (recent/favorites/playlists) (`/api/social/*`). |
+| **Shared playlists** | Owner sharing controls (share read-only or editable, manage shares); shared playlists appear in your library and respect `can_edit` (`/api/playlists/:id/shares`). |
+| **Equalizer** | 5-band EQ + presets persisted to device. *(UI/persistence only — live AVPlayer streaming EQ needs an AVAudioEngine path; see `EqualizerView.swift`.)* |
+| **API tokens** | Create (shown once), list and revoke personal API access tokens (`/api/auth/tokens`). |
+| **Admin** | Manage users (`/api/users`) and server settings with a slskd connection test (`/api/settings`) — admin only. |
 
 ## Project layout
 

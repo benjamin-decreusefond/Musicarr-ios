@@ -65,6 +65,9 @@ struct TrackRow: View {
                     .foregroundStyle(Theme.accent).font(.system(size: 14))
             } else if downloads.isDownloading(track.id) {
                 ProgressView().tint(Theme.accent).scaleEffect(0.7)
+            } else if downloads.didFail(track.id) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Theme.danger).font(.system(size: 13))
             }
             if isFav {
                 Image(systemName: "heart.fill").foregroundStyle(Theme.accent).font(.system(size: 13))

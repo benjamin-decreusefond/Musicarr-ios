@@ -74,7 +74,10 @@ final class AppState: ObservableObject {
 
     func changePassword(current: String, next: String) async throws {
         try await api.post("/api/auth/password", body: JSONBody(["current": current, "next": next]))
-        if me != nil { me = Me(id: me!.id, username: me!.username, is_admin: me!.is_admin, must_change_password: false) }
+        if let current = me {
+            me = Me(id: current.id, username: current.username,
+                    is_admin: current.is_admin, must_change_password: false)
+        }
     }
 
     // MARK: Discovery / browse
@@ -174,4 +177,119 @@ final class AppState: ObservableObject {
     /// Authenticated streaming URL for a track that exists on the server.
     func streamURL(_ id: Int) -> URL { api.url("/api/stream/\(id)") }
     var streamingCookies: [HTTPCookie] { api.cookies }
+}
+
+// MARK: - Newer features (stats, mixes, listen-together, social, sharing, admin)
+
+extension AppState {
+    // MARK: Stats
+    func stats(range: String) async throws -> StatsResponse {
+        try await api.get("/api/stats?range=\(range)", as: StatsResponse.self)
+    }
+
+    // MARK: Mixes / Made For You
+    func mixes() async throws -> MixesResponse {
+        try await api.get("/api/mixes", as: MixesResponse.self)
+    }
+
+    // MARK: Listen Together
+    func listenActive() async throws -> ListenActiveResponse {
+        try await api.get("/api/listen/active", as: ListenActiveResponse.self)
+    }
+    func listenStart() async throws -> ListenSession {
+        try await api.post("/api/listen/start", as: ListenSession.self)
+    }
+    func listenJoin(code: String) async throws -> ListenSession {
+        try await api.post("/api/listen/join", body: JSONBody(["code": code]), as: ListenSession.self)
+    }
+    func listenSession(_ id: Int) async throws -> ListenSession {
+        try await api.get("/api/listen/\(id)", as: ListenSession.self)
+    }
+    func listenPostState(_ id: Int, trackId: Int?, position: Double, isPlaying: Bool) async throws {
+        try await api.post("/api/listen/\(id)/state",
+                           body: JSONBody(["track_id": trackId ?? 0,
+                                           "position": position,
+                                           "is_playing": isPlaying]))
+    }
+    func listenLeave(_ id: Int) async throws {
+        try await api.post("/api/listen/\(id)/leave")
+    }
+
+    // MARK: Following artists (auto-download)
+    func following() async throws -> [FollowedArtist] {
+        try await api.get("/api/following", as: [FollowedArtist].self)
+    }
+    func follow(artistId: Int) async throws {
+        try await api.put("/api/following/\(artistId)")
+    }
+    func unfollow(artistId: Int) async throws {
+        try await api.delete("/api/following/\(artistId)")
+    }
+
+    // MARK: Social
+    func socialUsers(q: String = "") async throws -> [SocialUser] {
+        let enc = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        return try await api.get("/api/social/users?q=\(enc)", as: [SocialUser].self)
+    }
+    func socialFollowing() async throws -> [SocialUser] {
+        try await api.get("/api/social/following", as: [SocialUser].self)
+    }
+    func socialFollow(_ id: Int) async throws {
+        try await api.post("/api/social/follow/\(id)")
+    }
+    func socialUnfollow(_ id: Int) async throws {
+        try await api.delete("/api/social/follow/\(id)")
+    }
+    func socialProfile(_ id: Int) async throws -> SocialProfile {
+        try await api.get("/api/social/users/\(id)", as: SocialProfile.self)
+    }
+
+    // MARK: Shared playlists
+    func playlistShares(_ id: Int) async throws -> [PlaylistShare] {
+        try await api.get("/api/playlists/\(id)/shares", as: [PlaylistShare].self)
+    }
+    func addPlaylistShare(_ id: Int, userId: Int, canEdit: Bool) async throws {
+        try await api.post("/api/playlists/\(id)/shares",
+                           body: JSONBody(["user_id": userId, "can_edit": canEdit]))
+    }
+    func removePlaylistShare(_ id: Int, userId: Int) async throws {
+        try await api.delete("/api/playlists/\(id)/shares/\(userId)")
+    }
+
+    // MARK: API tokens (any signed-in user)
+    func apiTokens() async throws -> [APIToken] {
+        try await api.get("/api/auth/tokens", as: [APIToken].self)
+    }
+    func createApiToken(name: String) async throws -> APIToken {
+        try await api.post("/api/auth/tokens", body: JSONBody(["name": name]), as: APIToken.self)
+    }
+    func revokeApiToken(_ id: Int) async throws {
+        try await api.delete("/api/auth/tokens/\(id)")
+    }
+
+    // MARK: Admin — users
+    func adminUsers() async throws -> [AdminUser] {
+        try await api.get("/api/users", as: [AdminUser].self)
+    }
+    func createUser(username: String, password: String, isAdmin: Bool) async throws {
+        try await api.post("/api/users",
+                           body: JSONBody(["username": username, "password": password, "is_admin": isAdmin]))
+    }
+    func deleteUser(_ id: Int) async throws {
+        try await api.delete("/api/users/\(id)")
+    }
+
+    // MARK: Admin — settings
+    func settings() async throws -> ServerSettings {
+        try await api.get("/api/settings", as: ServerSettings.self)
+    }
+    func updateSettings(_ body: JSONBody) async throws {
+        try await api.put("/api/settings", body: body)
+    }
+    func testSettings(section: String, slskdURL: String?, slskdKey: String?) async throws -> SettingsTestResult {
+        var d: [String: Encodable] = ["section": section]
+        if let slskdURL { d["slskd_url"] = slskdURL }
+        if let slskdKey { d["slskd_api_key"] = slskdKey }
+        return try await api.post("/api/settings/test", body: JSONBody(d), as: SettingsTestResult.self)
+    }
 }

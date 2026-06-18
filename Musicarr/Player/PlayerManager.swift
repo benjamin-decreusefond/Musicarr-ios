@@ -54,6 +54,14 @@ final class PlayerManager: ObservableObject {
         self.downloads = downloads
     }
 
+    deinit {
+        // Task.cancel() is thread-safe / nonisolated, so it's safe to call from deinit.
+        heartbeatTask?.cancel()
+        if let timeObserver { player.removeTimeObserver(timeObserver) }
+        if let itemEndObserver { NotificationCenter.default.removeObserver(itemEndObserver) }
+        statusObservation?.invalidate()
+    }
+
     // MARK: Public controls
 
     func play(_ tracks: [Track], startAt start: Int = 0) {
@@ -84,7 +92,7 @@ final class PlayerManager: ObservableObject {
         if repeatMode == .one { seek(0); player.play(); playing = true; return }
         if index < queue.count - 1 { playAt(index + 1) }
         else if repeatMode == .all && !queue.isEmpty { playAt(0) }
-        else { playing = false; player.pause() }
+        else { playing = false; player.pause(); stopHeartbeat() }
         beat()
     }
 
@@ -182,12 +190,26 @@ final class PlayerManager: ObservableObject {
         heartbeatTask?.cancel()
         heartbeatTask = Task { [weak self] in
             while !Task.isCancelled {
-                self?.beat()
+                await self?.sendBeat()
                 try? await Task.sleep(nanoseconds: 20_000_000_000)
             }
         }
     }
-    private func beat() { Task { await app?.heartbeat(current?.id) } }
+
+    private func stopHeartbeat() {
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
+    }
+
+    /// Fire a one-off presence beat (used on transport changes).
+    private func beat() { Task { @MainActor [weak self] in await self?.sendBeat() } }
+
+    /// Send one presence beat. Captures `app` safely (it's the only race the old
+    /// fire-and-forget `Task` had); a nil app is simply a no-op.
+    private func sendBeat() async {
+        guard let app else { return }
+        await app.heartbeat(current?.id)
+    }
 
     // MARK: Audio session + remote command center
 

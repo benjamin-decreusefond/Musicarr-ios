@@ -6,6 +6,12 @@ struct ProfileView: View {
     @EnvironmentObject private var downloads: DownloadManager
     @Environment(\.dismiss) private var dismiss
     @State private var showChangePassword = false
+    @State private var sheet: ProfileSheet?
+
+    private enum ProfileSheet: Identifiable {
+        case stats, madeForYou, listen, social, following, equalizer, tokens, users, settings
+        var id: Int { hashValue }
+    }
 
     var body: some View {
         NavigationStack {
@@ -29,6 +35,17 @@ struct ProfileView: View {
                         }
                     }.listRowBackground(Theme.bgElev)
 
+                    Section("For you") {
+                        navButton("Your stats", "chart.bar.fill") { sheet = .stats }
+                        navButton("Made for you", "sparkles") { sheet = .madeForYou }
+                        navButton("Listen Together", "person.2.wave.2.fill") { sheet = .listen }
+                        navButton("Friends", "person.2.fill") { sheet = .social }
+                        NavigationLink { FollowingView() } label: {
+                            Label("Following artists", systemImage: "bell.fill")
+                        }
+                        navButton("Equalizer", "slider.horizontal.3") { sheet = .equalizer }
+                    }.listRowBackground(Theme.bgElev)
+
                     Section("Server") {
                         labeled("Connected to", app.serverURLString)
                         labeled("Offline songs", "\(downloads.offlineTracks.count)")
@@ -37,10 +54,18 @@ struct ProfileView: View {
 
                     Section("Account") {
                         Button("Change password") { showChangePassword = true }
+                        navButton("API access tokens", "key.fill") { sheet = .tokens }
                         Button("Sign out", role: .destructive) {
                             Task { await app.logout(); library.clear(); dismiss() }
                         }
                     }.listRowBackground(Theme.bgElev)
+
+                    if app.me?.is_admin == true {
+                        Section("Admin") {
+                            navButton("Users", "person.3.fill") { sheet = .users }
+                            navButton("Settings", "gearshape.fill") { sheet = .settings }
+                        }.listRowBackground(Theme.bgElev)
+                    }
 
                     Section {
                         Button("Remove all offline downloads", role: .destructive) { downloads.removeAll() }
@@ -48,6 +73,7 @@ struct ProfileView: View {
                 }
                 .hideScrollBackground()
             }
+            .musicarrDestinations()
             .navigationTitle("Profile")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -57,6 +83,26 @@ struct ProfileView: View {
             .sheet(isPresented: $showChangePassword) {
                 ChangePasswordView().musicarrScreen()
             }
+            .sheet(item: $sheet) { which in
+                switch which {
+                case .stats: StatsView()
+                case .madeForYou: MadeForYouView()
+                case .listen: ListenTogetherView()
+                case .social: SocialView()
+                case .following: NavigationStack { FollowingView().musicarrDestinations() }.musicarrScreen()
+                case .equalizer: EqualizerView()
+                case .tokens: APITokensView()
+                case .users: UsersAdminView()
+                case .settings: SettingsAdminView()
+                }
+            }
+        }
+    }
+
+    private func navButton(_ title: String, _ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .foregroundStyle(Theme.text)
         }
     }
 

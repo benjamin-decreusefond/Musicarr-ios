@@ -40,7 +40,21 @@ final class APIClient {
     func setBaseURL(_ url: URL) { baseURL = url }
 
     func url(_ path: String) -> URL {
-        if path.hasPrefix("http") { return URL(string: path)! }
+        if path.hasPrefix("http") {
+            // Fall back to the base URL if the absolute path is somehow malformed,
+            // rather than crashing on a force-unwrap.
+            return URL(string: path) ?? baseURL
+        }
+        return baseURL.appendingPathComponent(path.hasPrefix("/") ? String(path.dropFirst()) : path)
+    }
+
+    /// Build a request URL, throwing a clear error for a malformed absolute path
+    /// instead of trapping. Used by the request path so callers get APIError.
+    private func requestURL(_ path: String) throws -> URL {
+        if path.hasPrefix("http") {
+            guard let u = URL(string: path) else { throw APIError.transport("Bad URL: \(path)") }
+            return u
+        }
         return baseURL.appendingPathComponent(path.hasPrefix("/") ? String(path.dropFirst()) : path)
     }
 
@@ -57,7 +71,11 @@ final class APIClient {
                                        body: Encodable? = nil,
                                        decode: T.Type) async throws -> T {
         let data = try await raw(method, path, body: body)
-        if T.self == EmptyResponse.self { return EmptyResponse() as! T }
+        // Only force the cast when T really is EmptyResponse; otherwise decode
+        // normally so a mismatch surfaces as a decoding error, not a crash.
+        if T.self == EmptyResponse.self {
+            if let empty = EmptyResponse() as? T { return empty }
+        }
         do {
             return try JSONDecoder().decode(T.self, from: data)
         } catch {
@@ -66,7 +84,7 @@ final class APIClient {
     }
 
     private func raw(_ method: String, _ path: String, body: Encodable?) async throws -> Data {
-        var req = URLRequest(url: url(path))
+        var req = URLRequest(url: try requestURL(path))
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         if let body {
